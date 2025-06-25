@@ -1,14 +1,16 @@
+
 const File = require('../models/fileModel');
 const { extractMetadata } = require('../utils/fileUtils');
 
 exports.uploadFile = async (req, res) => {
   try {
     const file = req.file;
-    const user = req.user; // Assuming `auth` middleware attaches user to req
+    const user = req.user; // Auth middleware must set this
 
     if (!file) return res.status(400).json({ error: "No file uploaded" });
     if (!user) return res.status(401).json({ error: "User not authenticated" });
 
+    // Extract metadata based on file type
     const metadata = await extractMetadata(file);
 
     const newFile = new File({
@@ -19,7 +21,8 @@ exports.uploadFile = async (req, res) => {
       size: file.size,
       uploadedBy: user._id,
       metadata,
-      status: 'ready'
+      status: 'ready',
+      uploadedAt: new Date()
     });
 
     await newFile.save();
@@ -31,6 +34,6 @@ exports.uploadFile = async (req, res) => {
 
   } catch (err) {
     console.error('Upload error:', err);
-    res.status(500).json({ error: "File upload failed" });
+    res.status(500).json({ error: "File upload failed", details: err.message });
   }
 };

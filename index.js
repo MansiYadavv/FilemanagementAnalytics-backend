@@ -10,7 +10,7 @@ const userRoutes= require('./routes/userRoutes');
 const submissionRoutes = require('./routes/submissionRoutes');
 const fileRoutes = require('./routes/fileRoutes');
 const path = require('path');
-
+const analyticsRoutes = require('./routes/analyticsRoutes');
 
 
 
@@ -40,6 +40,7 @@ app.get('/', (req, res) => {  //this make deployment ease because it give head a
 app.use('/api/users', userRoutes);
 app.use('/api/submissions', submissionRoutes);
 app.use('/api/files', fileRoutes);
+app.use('/api/analytics',analyticsRoutes)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 const PORT = process.env.PORT || 5000;
