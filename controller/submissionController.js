@@ -5,32 +5,9 @@ const sharp = require('sharp');
 const pdfParse = require('pdf-parse');
 const fs = require('fs');
 const path = require('path');
+const { extractMetadata } = require('../utils/fileUtils');
 
 
-async function extractMetadata(file) {
-  if (file.mimetype.startsWith('image/')) {
-    const metadata = await sharp(file.path).metadata();
-    return {
-      fileType: 'image',
-      fileMeta: {
-        size: file.size,
-        dimensions: { width: metadata.width, height: metadata.height },
-      },
-    };
-  } else if (file.mimetype === 'application/pdf') {
-    const dataBuffer = fs.readFileSync(file.path);
-    const pdfData = await pdfParse(dataBuffer);
-    return {
-      fileType: 'pdf',
-      fileMeta: {
-        size: file.size,
-        pageCount: pdfData.numpages,
-      },
-    };
-  } else {
-    throw new Error('Unsupported file type');
-  }
-}
 
 // POST /api/submissions
 exports.createSubmission = async (req, res) => {
@@ -97,18 +74,22 @@ exports.createSubmission = async (req, res) => {
 };
 
 
-// GET /api/submissions/:id
+
+
 exports.getSubmissionById = async (req, res) => {
   try {
-    const submission = await Submission.findById(req.params.id)
-      .populate('userId', 'name email')
-      .populate('files');
+    const submissionId = req.params.id;
 
-    if (!submission) return res.status(404).json({ message: 'Submission not found' });
+    // Populate 'files' to get full file documents, not just IDs
+    const submission = await Submission.findById(submissionId).populate('files');
+
+    if (!submission) {
+      return res.status(404).json({ message: 'Submission not found' });
+    }
 
     res.json(submission);
   } catch (error) {
-    res.status(500).json({ message: 'Failed to fetch submission', error: error.message });
+    console.error(error);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
-
