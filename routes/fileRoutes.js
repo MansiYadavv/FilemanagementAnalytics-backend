@@ -1,7 +1,5 @@
 
 
-
-// module.exports = router;
 const express = require('express');
 const router = express.Router();
 const upload = require('../middleware/uploads'); 
@@ -19,3 +17,5 @@ router.post(
 );
 
 module.exports = router;
+
+
