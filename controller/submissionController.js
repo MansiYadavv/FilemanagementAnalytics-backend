@@ -1,95 +1,41 @@
-const Submission = require('../models/userSubmissionModel');
-const FileUpload = require('../models/fileModel');
-const User = require('../models/userModel');
-const sharp = require('sharp');
-const pdfParse = require('pdf-parse');
-const fs = require('fs');
-const path = require('path');
-const { extractMetadata } = require('../utils/fileUtils');
 
+const SubmissionService = require('../service/submissionService');
+const ResponseUtils = require('../utils/responseUtlis');
 
-
-// POST /api/submissions
-exports.createSubmission = async (req, res) => {
-  try {
-    const { title, description, category, userId } = req.body;
-
-    if (!title || !category || !userId) {
-      return res.status(400).json({ message: 'Title, category, and userId are required' });
+class SubmissionController {
+  static async createSubmission(req, res, next) {
+    try {
+      const submission = await SubmissionService.createSubmission(req.body, req.files);
+      ResponseUtils.success(res, submission, 'Submission created successfully', 201);
+    } catch (error) {
+      next(error);
     }
-
-    const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ message: 'User not found' });
-
-    if (!req.files || req.files.length === 0) {
-      return res.status(400).json({ message: 'At least one file must be uploaded' });
-    }
-
-    const filesData = [];
-
-    for (const file of req.files) {
-      const meta = await extractMetadata(file);
-
-      const fileUpload = new FileUpload({
-        submissionId: null, // Will update after submission created
-        fileType: meta.fileType,
-        filename: file.filename,
-        originalName: file.originalname,
-        path: file.path,
-        mimetype: file.mimetype,
-        size: file.size,
-        metadata: meta.fileMeta,
-        uploadedAt: new Date(),
-        status: 'ready',
-      });
-
-      await fileUpload.save();
-      filesData.push(fileUpload);
-    }
-
-    const submission = new Submission({
-      title,
-      description,
-      category,
-      userId,
-      files: filesData.map(f => f._id),
-      submittedAt: new Date(),
-    });
-
-    await submission.save();
-
-    // Update submissionId in each file document
-    await Promise.all(
-      filesData.map(async (fileDoc) => {
-        fileDoc.submissionId = submission._id;
-        await fileDoc.save();
-      })
-    );
-
-    res.status(201).json({ message: 'Submission created', submission });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error', error: error.message });
   }
-};
 
-
-
-
-exports.getSubmissionById = async (req, res) => {
-  try {
-    const submissionId = req.params.id;
-
-    // Populate 'files' to get full file documents, not just IDs
-    const submission = await Submission.findById(submissionId).populate('files');
-
-    if (!submission) {
-      return res.status(404).json({ message: 'Submission not found' });
+  static async getSubmission(req, res, next) {
+    try {
+      const submission = await SubmissionService.getSubmissionById(req.params.id);
+      ResponseUtils.success(res, submission);
+    } catch (error) {
+      if (error.message === 'Submission not found') {
+        ResponseUtils.notFound(res, error.message);
+      } else {
+        next(error);
+      }
     }
-
-    res.json(submission);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error', error: error.message });
   }
-};
+
+  static async getAllSubmissions(req, res, next) {
+    try {
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10;
+      
+      const result = await SubmissionService.getAllSubmissions(page, limit);
+      ResponseUtils.success(res, result);
+    } catch (error) {
+      next(error);
+    }
+  }
+}
+
+module.exports = SubmissionController;

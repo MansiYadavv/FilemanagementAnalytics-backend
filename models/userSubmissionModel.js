@@ -1,21 +1,43 @@
-// const mongoose = require('mongoose');
-// const submissionSchema = new mongoose.Schema({
-//   user: { type: mongoose.Types.ObjectId, ref: 'User' },
-//   title: String, description: String,
-//   filePath: String, 
-//   status: { type: String, enum: ['pending','approved','rejected'], default: 'pending' },
-// }, { timestamps: true });
-// module.exports = mongoose.model('Submission', submissionSchema);
 
 const mongoose = require('mongoose');
 
-const SubmissionSchema = new mongoose.Schema({
-  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  title: String,
-  description: String,
-  submissionDate: { type: Date, default: Date.now },
-  files: [{ type: mongoose.Schema.Types.ObjectId, ref: 'File' }],
-  metadata: mongoose.Schema.Types.Mixed,
+const submissionSchema = new mongoose.Schema({
+  title: {
+    type: String,
+    required: [true, 'Title is required'],
+    trim: true,
+    maxlength: [200, 'Title cannot exceed 200 characters']
+  },
+  description: {
+    type: String,
+    required: [true, 'Description is required'],
+    trim: true,
+    maxlength: [1000, 'Description cannot exceed 1000 characters']
+  },
+  category: {
+    type: String,
+    required: [true, 'Category is required'],
+    enum: ['Research', 'Application', 'Report', 'Other'],
+    default: 'Other'
+  },
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: [true, 'User ID is required']
+  },
+  files: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'FileUpload'
+  }],
+  submittedAt: {
+    type: Date,
+    default: Date.now
+  }
 });
 
-module.exports = mongoose.model('Submission', SubmissionSchema);
+// Indexes for better query performance
+submissionSchema.index({ userId: 1 });
+submissionSchema.index({ category: 1 });
+submissionSchema.index({ submittedAt: -1 });
+
+module.exports = mongoose.model('Submission', submissionSchema);
